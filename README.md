@@ -42,9 +42,11 @@ This is an interactive and visually engaging dashboard built using Streamlit tha
    cd Netflix-Dashboard
 
 2. Install Required Packages
+    ```bash
    pip install -r requirements.txt
 
-3. Run the App
+4. Run the App
+    ```bash
    streamlit run netflix_dashboard1.py
 
 
