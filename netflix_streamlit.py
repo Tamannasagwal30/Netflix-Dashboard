@@ -23,9 +23,10 @@ from sklearn.metrics.pairwise import cosine_similarity
 #Set the Page Layout
 st.set_page_config(page_title='Netflix Dashboard', layout = 'wide')
 
-# Main Header
+#Title of the Page
 st.title("Netflix Exploratory Data Dashboard")
 
+#Setting the Background and Text Colors
 st.markdown("""
     <style>
     .main {
@@ -50,7 +51,7 @@ tab1, tab2, tab3, tab4, tab5, tab6, tab7 = st.tabs([
     "Recommender"
 ])
 
-#Load Data
+#Loading the Data
 @st.cache_data
 def load_data():
     with st.spinner("Loading Netflix dataset..."):
@@ -58,7 +59,7 @@ def load_data():
     return df
 df = load_data()
 
-#Sidebar Filters
+#Adding Filters
 st.sidebar.header('Filter Netflix Titles')
 
 #Filter by Type
@@ -81,6 +82,8 @@ if st.checkbox("Show raw data"):
     st.subheader("RAW DATA")
     st.dataframe(df_filtered)
 
+
+#Plotting the Graphs
 with tab1:
     st.subheader("Overview")
     st.caption("A high-level snapshot showing Netflix content is distributed by type (Movie or TV Show) and added each year.")
@@ -108,13 +111,13 @@ with tab1:
         #Make a copy to avoid modifying original dataframe
         df_year = df_filtered.copy()
 
-        # Convert 'date_added' to datetime if not already done (important)
+        # Converting 'date_added' to datetime format
         df_year['date_added'] = pd.to_datetime(df_year['date_added'], errors='coerce')
 
         #Extract year from date_added column
         df_year['year_added'] = df_year['date_added'].dt.year
 
-        #Drop rows where year added is NaN
+        #Drop rows where year added is not available
         df_year = df_year.dropna(subset=['year_added'])
 
         #Group by year and type and then count
@@ -140,7 +143,11 @@ with tab2:
 
     with st.expander("See Top 10 Directors with Most Content"):
         st.subheader("Top 10 Directors with Most Content")
+
+        #Filtering the directors based on the applied filters
         directors = df_filtered[df_filtered['director'].notna() & (df_filtered['director'] != 'Not Available')]
+
+        #Top_directors
         top_directors = directors['director'].value_counts().head(10).reset_index()
         top_directors.columns = ['Director', 'Count']
 
@@ -157,14 +164,20 @@ with tab2:
     with st.expander("See Top 10 Genres by Number of Titles"):
         st.subheader("Top 10 Genres by Number of Titles")
 
+        #Making a copy of original DataFrame
         df_genres = df_filtered.copy()
 
+        #Split the genre column into lists
         df_genres['listed_in'] = df_genres['listed_in'].dropna().str.split(',')
+
+        #Converting the list in separate rows for each genre using .explode()
         df_genres = df_genres.explode('listed_in')
         df_genres['listed_in'] = df_genres['listed_in'].str.strip()  # remove leading/trailing spaces
 
+        # Selecting the Top 10 most common genres
         top_genres = df_genres['listed_in'].value_counts().head(10)
 
+        #Creating a Bar Plot for Visualization
         plt.figure(figsize=(10, 5))
         sns.barplot(x=top_genres.index, y=top_genres.values, palette='coolwarm')
         plt.title('Top 10 Genres by Number of Titles')
@@ -173,22 +186,34 @@ with tab2:
         plt.xticks(rotation=45)
         plt.grid(True)
 
+        #Display the matplotlib plot in Streamlit
         st.pyplot(plt.gcf())
         plt.clf()
 
+        #Add a Horizontal Rule for Visual Separation
         st.markdown("---")
 
 with tab3:
+    # Add a subheader for the overall section on duration analysis
     st.subheader("Duration Analysis")
+ 
+    # Add a brief caption explaining what this section is about
     st.caption("Analyze how movie durations and TV show seasons vary across the Netflix catalog.")
 
+    # Create an expandable section for movie duration distribution
     with st.expander("See Distribution of Movie Durations"):
         st.subheader("Distribution of Movie Durations")
-   
+        
+        # Filter the dataset to include only movies  
         movies = df_filtered[df_filtered['type'] == 'Movie'].copy()
+
+        # Extract the numerical part (duration in minutes) from the 'duration' column and convert it to a numeric datatype 
         movies['duration_int'] = pd.to_numeric(movies['duration'].str.extract(r'(\d+)')[0], errors='coerce')
+
+        # Drop rows with NaN values
         movies_clean = movies.dropna(subset=['duration_int'])
 
+        # Create a histogram using seaborn to show how movie durations are distributed
         plt.figure(figsize=(10,6))
         sns.histplot(movies_clean['duration_int'], bins=30, kde=True, color='skyblue')
         plt.xlabel('Duration (minutes)')
@@ -200,14 +225,22 @@ with tab3:
 
         st.markdown("---")
 
-    
+    #Create an expandable section for analyzing TV show durations (in terms of seasons)
     with st.expander("See TV Shows by Number of Seasons"):
+        # Add a subheader for this specific chart
         st.subheader("TV Shows by Number of Seasons")
-
+        
+        # Filter the dataset to include only TV shows
         tv_shows = df_filtered[df_filtered['type'] == 'TV Show'].copy()
+
+        # Extract the number of seasons from the 'duration' column (e.g., "2 Seasons" -> 2)
+        # Convert the extracted string into numeric format
         tv_shows['duration_int'] = pd.to_numeric(tv_shows['duration'].str.extract(r'(\d+)')[0], errors='coerce')
+
+        # Drop rows where the number of seasons couldn't be extracted
         tv_shows_clean = tv_shows.dropna(subset=['duration_int'])
 
+        # Create a bar chart to show how many TV shows with different seasons
         plt.figure(figsize=(8,6))
         sns.countplot(x='duration_int', data=tv_shows_clean, color='orange')
         plt.xlabel('Number of Seasons')
@@ -215,16 +248,24 @@ with tab3:
         plt.title('TV Shows Duration Distribution')
         plt.grid(True)
         st.pyplot(plt.gcf())
-        plt.clf()
+        plt.clf()              # Clear the plot so it doesn't interfere with other visualizations
 
         st.markdown("---")
 
 with tab4:
+    # Add a subheader for the section
     st.subheader("Text Analysis")
-    st.caption("Dive into the language of Netflix titles and their release patterns with visual tools like word clouds and scatter plots.")
 
+    # Add a brief caption to describe what this section covers
+    st.caption("Dive into the language of Netflix titles and their release patterns with visual tools like word clouds and scatter plots.")
+    
+    # Create an expandable section for the word cloud visualization
     with st.expander("See Word Cloud of Netflix Titles"):
+
+        # Add a subheader within the expander
         st.subheader("Word Cloud of Netflix Titles")
+
+        # Check if the filtered dataset is not empty
         if not df_filtered.empty:
              # Combine all titles into a single string
              text = " ".join(title for title in df_filtered['title'].dropna())
@@ -242,12 +283,20 @@ with tab4:
              st.markdown("---")
         else:
            st.info("No data selected. Please choose at least one filter option to generate the Word Cloud.")
-
+            
+    # Create an expandable section for the scatter plot
     with st.expander("See Movie Duration vs Release Year (Interactive Scatter Plot)"):
+
+        # Add a subheader within the expander
         st.subheader("Movie Duration vs Release Year (Interactive Scatter Plot)")
+
+        # Explain what this plot is about and clarify it’s based on the full dataset
         st.markdown("**Note:** The scatter plot below shows overall movie duration trends and is not affected by country or other filters.")
-    
+
+        # Filter the full dataset to get only movie entries
         movies = df[df['type'] == 'Movie'].copy()
+
+        # Create a copy and extract duration as an integer 
         movies_clean = df[df['type'] == 'Movie'].copy()
         movies_clean['duration_int'] = pd.to_numeric(movies_clean['duration'].str.extract(r'(\d+)')[0], errors='coerce')
     
@@ -255,6 +304,7 @@ with tab4:
         #Ensure required columns are numeric and drop missing
         scatter_df = movies_clean[['release_year', 'duration_int']].dropna()
 
+        # Create a scatter plot to show the relationship between release year and movie duration
         import plotly.express as px
 
         fig = px.scatter(
@@ -264,9 +314,13 @@ with tab4:
             title='Movies Duration vs Release Year',
             labels={'release_year': 'Release Year', 'duration_int': 'Duration (Minutes)'},
             opacity=0.6,
-            color_discrete_sequence=['indianred']
+            color_discrete_sequence=['indianred']  # Choose a color for the markers
         )
+
+        # Make the background transparent for a cleaner UI
         fig.update_layout(plot_bgcolor='rgba(0,0,0,0)', paper_bgcolor='rgba(0,0,0,0)')
+
+        # Display the plot in Streamlit with responsive width
         st.plotly_chart(fig, use_container_width=True)
 
 
@@ -298,21 +352,30 @@ with tab5:
          st.markdown("---")
 
 with tab6:
+    # Add a subheader for the section
     st.subheader("Sentiment")
-    st.caption("Analyze the average sentiment of Netflix title descriptions over the years.")
 
+    # Add a caption explaining what this section explores
+    st.caption("Analyze the average sentiment of Netflix title descriptions over the years.")
+    
+    # Create an expandable section for yearly release trends
     with st.expander("See Average Sentiment of Netflix Titles Over the Years"):
+
+        # Add a subheader inside the expander
         st.subheader("Average Sentiment of Netflix Titles Over the Years")
+        
         # Initialize the sentiment analyzer
         sia = SentimentIntensityAnalyzer()
 
         # Apply sentiment analysis on the 'title' column, create a new 'sentiment' column with compound score
         df['sentiment'] = df['title'].apply(lambda x: sia.polarity_scores(str(x))['compound'])
+        
         #Visualize Sentiment Scores over Year
         df['release_year'] = pd.to_numeric(df['release_year'], errors='coerce')
 
         sentiment_by_year = df.groupby('release_year')['sentiment'].mean().reset_index()
 
+        # Create a line chart using Plotly Express to visualize the yearly trend
         plt.figure(figsize=(12,6))
         sns.lineplot(data=sentiment_by_year, x='release_year', y='sentiment')
         plt.xlabel('Release Year')
@@ -324,7 +387,10 @@ with tab6:
         st.markdown("---")
 
 with tab7:
+    # Add a subheader for the recommender section
     st.subheader("Netflix Title Recommender")
+
+    # Add a caption describing the purpose of this feature
     st.caption("Select a Netflix title to get smart recommendations for similar movies or shows.")
 
     with st.expander("See Netflix Title Recommender"):
