@@ -52,6 +52,6 @@ This is an interactive and visually engaging dashboard built using Streamlit tha
 
 - Live Demo
 
-[Add your Streamlit Cloud link here after deployment]
+https://netflix-dashboard-tamannasagwal30.streamlit.app
    
 
